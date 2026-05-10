@@ -122,10 +122,13 @@ def _build_modal_view(
                 # Option A is already manageable via its text input box.
                 if url != image_element.get("initial_value"):
                     # Slack crashes if it can't download the image (common with Ngrok/local URLs)
-                    if config.BASE_PUBLIC_URL in url:
+                    is_public = "imgbb.com" in url or "buffer.com" in url or "cloudinary.com" in url
+                    is_local = config.BASE_PUBLIC_URL in url or "localhost" in url or ".ngrok" in url
+                    
+                    if is_local or not is_public:
                         blocks.append({
                             "type": "section",
-                            "text": {"type": "mrkdwn", "text": f"🖼️ *Local Image:* <{url}|View Image>\n_(Preview hidden to prevent Slack errors)_"},
+                            "text": {"type": "mrkdwn", "text": f"🖼️ *Image Preview:* <{url}|View in Browser>\n_(Preview hidden for reliability)_"},
                             "accessory": {
                                 "type": "button",
                                 "text": {"type": "plain_text", "text": "🗑️"},
@@ -133,7 +136,7 @@ def _build_modal_view(
                                 "value": url,
                                 "confirm": {
                                     "title": {"type": "plain_text", "text": "Remove Image?"},
-                                    "text": {"type": "plain_text", "text": "Are you sure you want to remove this uploaded image?"},
+                                    "text": {"type": "plain_text", "text": "Are you sure you want to remove this image?"},
                                     "confirm": {"type": "plain_text", "text": "Remove"},
                                     "deny": {"type": "plain_text", "text": "Cancel"}
                                 }
@@ -150,7 +153,7 @@ def _build_modal_view(
                                 "value": url,
                                 "confirm": {
                                     "title": {"type": "plain_text", "text": "Remove Image?"},
-                                    "text": {"type": "plain_text", "text": "Are you sure you want to remove this uploaded image?"},
+                                    "text": {"type": "plain_text", "text": "Are you sure you want to remove this image?"},
                                     "confirm": {"type": "plain_text", "text": "Remove"},
                                     "deny": {"type": "plain_text", "text": "Cancel"}
                                 }

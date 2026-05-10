@@ -27,14 +27,20 @@ class VisualService:
         search_paths = [
             "C:\\Windows\\Fonts\\",
             "/usr/share/fonts/truetype/",
+            "/usr/share/fonts/truetype/dejavu/",
+            "/usr/share/fonts/truetype/liberation/",
             "assets/fonts/"
         ]
+        # Common Linux font alternatives
+        linux_alternatives = ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "Ubuntu-B.ttf"]
+        
         for path in search_paths:
-            for name in font_names:
+            if not os.path.exists(path): continue
+            for name in font_names + linux_alternatives:
                 full_path = os.path.join(path, name)
                 if os.path.exists(full_path):
                     return full_path
-        return None # Fallback to default PIL font
+        return None 
 
     def _wrap_text(self, text: str, font, max_width: int) -> list:
         """Wraps text to fit within a specified width."""
@@ -58,18 +64,15 @@ class VisualService:
 
     def generate_news_card(self, headline: str, brand_name: str = "AI News Daily") -> str:
         """
-        Creates a square news card with a headline and branding.
-        Uses random themes to ensure variety.
+        Creates a high-impact square news card with dynamic font scaling.
         """
         import random
         
-        # Define premium themes
         THEMES = [
-            {"bg": (10, 10, 15), "accent": (0, 100, 255), "glow": (0, 40, 120), "name": "Deep Blue"},
-            {"bg": (15, 10, 20), "accent": (150, 50, 255), "glow": (60, 20, 100), "name": "Royal Purple"},
-            {"bg": (10, 15, 12), "accent": (0, 200, 120), "glow": (0, 80, 50), "name": "Emerald Tech"},
-            {"bg": (18, 12, 10), "accent": (255, 100, 0), "glow": (120, 40, 0), "name": "Solar Flare"},
-            {"bg": (20, 20, 20), "accent": (200, 200, 200), "glow": (60, 60, 60), "name": "Midnight Gray"}
+            {"bg": (10, 10, 15), "accent": (0, 120, 255), "glow": (0, 50, 150), "name": "Cyber Blue"},
+            {"bg": (15, 10, 20), "accent": (160, 60, 255), "glow": (70, 30, 120), "name": "Neon Purple"},
+            {"bg": (10, 18, 15), "accent": (0, 220, 140), "glow": (0, 100, 60), "name": "Matrix Green"},
+            {"bg": (20, 15, 10), "accent": (255, 110, 0), "glow": (140, 50, 0), "name": "Amber Tech"}
         ]
         
         theme = random.choice(THEMES)
@@ -82,61 +85,64 @@ class VisualService:
             img = Image.new('RGB', (self.width, self.height), color=bg_color)
             draw = ImageDraw.Draw(img)
 
-            # --- Add Advanced Background Gradients ---
-            # Main Glow
+            # --- Background Glow ---
             glow = Image.new('RGB', (self.width, self.height), (0, 0, 0))
             glow_draw = ImageDraw.Draw(glow)
-            glow_draw.ellipse([self.width//3, -self.height//3, self.width*1.4, self.height//1.5], fill=glow_color)
-            
-            # Secondary subtle glow for depth
-            glow_draw.ellipse([-self.width//4, self.height//1.5, self.width//2, self.height*1.2], fill=(20, 20, 25))
-            
-            glow = glow.filter(ImageFilter.GaussianBlur(radius=180))
-            img = Image.blend(img, glow, 0.6)
+            glow_draw.ellipse([self.width//4, -self.height//4, self.width*1.2, self.height//1.8], fill=glow_color)
+            glow = glow.filter(ImageFilter.GaussianBlur(radius=150))
+            img = Image.blend(img, glow, 0.5)
             draw = ImageDraw.Draw(img)
 
-            # --- Draw Header Tag ---
-            margin = 90
-            tag_text = "🔥 TRENDING AI NEWS"
-            tag_font_size = 32
-            tag_font = ImageFont.truetype(self.font_bold, tag_font_size) if self.font_bold else ImageFont.load_default()
+            margin = 80
             
-            draw.text((margin, margin), tag_text, font=tag_font, fill=accent_color)
+            # --- Dynamic Font Selection ---
+            font_size = 90 if len(headline) < 60 else 70
+            if len(headline) > 100: font_size = 55
+            
+            try:
+                headline_font = ImageFont.truetype(self.font_bold, font_size) if self.font_bold else ImageFont.load_default()
+            except:
+                headline_font = ImageFont.load_default()
 
-            # --- Draw Headline ---
-            headline_font_size = 78
-            headline_font = ImageFont.truetype(self.font_bold, headline_font_size) if self.font_bold else ImageFont.load_default()
+            # Wrap text
+            max_text_width = self.width - (margin * 2)
+            wrapped_lines = self._wrap_text(headline.upper(), headline_font, max_text_width)
             
-            wrapped_lines = self._wrap_text(headline, headline_font, self.width - (margin * 2))
-            
-            # Calculate text block height
-            line_spacing = 25
-            total_height = len(wrapped_lines) * (headline_font_size + line_spacing)
+            # Center vertically
+            line_spacing = 20
+            # Get height per line (fallback for default font)
+            h = font_size if self.font_bold else 20
+            total_height = len(wrapped_lines) * (h + line_spacing)
             y_start = (self.height // 2) - (total_height // 2)
-            
+
+            # --- Header Tag ---
+            try:
+                tag_font = ImageFont.truetype(self.font_bold, 30) if self.font_bold else ImageFont.load_default()
+            except: tag_font = ImageFont.load_default()
+            draw.text((margin, margin), "⚡ LATEST AI NEWS", font=tag_font, fill=accent_color)
+
+            # --- Headline ---
             for i, line in enumerate(wrapped_lines):
-                y = y_start + i * (headline_font_size + line_spacing)
-                # Subtle drop shadow for readability
-                draw.text((margin + 2, y + 2), line, font=headline_font, fill=(0, 0, 0))
-                draw.text((margin, y), line, font=headline_font, fill=self.text_color)
+                y = y_start + i * (h + line_spacing)
+                # Drop shadow
+                draw.text((margin + 3, y + 3), line, font=headline_font, fill=(0, 0, 0))
+                draw.text((margin, y), line, font=headline_font, fill=(255, 255, 255))
 
-            # --- Draw Footer / Branding ---
-            footer_font_size = 38
-            footer_font = ImageFont.truetype(self.font_regular, footer_font_size) if self.font_regular else ImageFont.load_default()
+            # --- Footer ---
+            try:
+                footer_font = ImageFont.truetype(self.font_regular, 36) if self.font_regular else ImageFont.load_default()
+            except: footer_font = ImageFont.load_default()
             
-            # Bottom brand name
-            draw.text((margin, self.height - margin - 50), brand_name, font=footer_font, fill=self.secondary_text_color)
-            
-            # Draw a sleek accent line
-            draw.rectangle([margin, self.height - margin - 75, margin + 120, self.height - margin - 68], fill=accent_color)
+            draw.rectangle([margin, self.height - margin - 80, margin + 150, self.height - margin - 72], fill=accent_color)
+            draw.text((margin, self.height - margin - 55), brand_name.upper(), font=footer_font, fill=(180, 180, 180))
 
-            # --- Save Image ---
+            # --- Save ---
             os.makedirs(config.MEDIA_DIR, exist_ok=True)
             filename = f"news_card_{uuid.uuid4().hex[:8]}.png"
             file_path = os.path.join(config.MEDIA_DIR, filename)
-            img.save(file_path)
+            img.save(file_path, quality=95)
             
-            logger.info(f"VisualService: News card generated using theme '{theme['name']}' at {file_path}")
+            logger.info(f"VisualService: Premium card generated at {file_path}")
             return file_path
 
         except Exception as e:

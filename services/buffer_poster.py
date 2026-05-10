@@ -51,7 +51,6 @@ def broadcast_to_buffer(posts: dict, selected_channels: dict, image_urls: list =
                             # Cloud URL? Download it temporarily
                             temp_filename = f"ig_temp_{idx}_{os.path.basename(img_url.split('?')[0])}"
                             local_path = os.path.join(config.MEDIA_DIR, temp_filename)
-                            import requests
                             r = requests.get(img_url, timeout=10)
                             with open(local_path, "wb") as f:
                                 f.write(r.content)

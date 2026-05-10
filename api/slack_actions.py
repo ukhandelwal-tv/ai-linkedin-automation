@@ -61,6 +61,30 @@ def _task_update_via_response_url(response_url: str, updated_text: str) -> None:
         logger.error(f"Failed to update via response_url: {e}")
 
 
+def _task_toggle_preview(channel_id: str, ts: str, post_id: str, show: bool) -> None:
+    """Handles the heavy lifting of building blocks and updating Slack in the background."""
+    stored_data = pending_post_service.get_post(post_id)
+    if stored_data:
+        blocks = build_multi_platform_message(
+            posts_data=stored_data["posts"],
+            channels=config.BUFFER_CHANNELS,
+            post_id=post_id,
+            image_urls=stored_data.get("image_urls"),
+            show_images=show
+        )
+        slack_client.post("chat.update", {
+            "channel": channel_id,
+            "ts": ts,
+            "text": "Preview Toggled",
+            "blocks": blocks
+        })
+
+
+def _task_remove_image_direct(view_id: str, current_posts: dict, channel_id: str, ts: str, post_id: str, new_image_urls: list) -> None:
+    """Updates the modal after an image is removed in the background."""
+    update_edit_modal(view_id, current_posts, channel_id, ts, post_id, new_image_urls)
+
+
 async def _task_open_edit_modal(view_id: str, post_id: str, channel_id: str, ts: str, response_url: str) -> None:
     """Fetches data and replaces the loading modal with the real editor."""
     stored_data = pending_post_service.get_post(post_id)
@@ -264,21 +288,13 @@ async def slack_actions(request: Request, background_tasks: BackgroundTasks):
                 post_id = parts[0]
                 mode = parts[1] # "show" or "hide"
                 
-                stored_data = pending_post_service.get_post(post_id)
-                if stored_data:
-                    blocks = build_multi_platform_message(
-                        posts_data=stored_data["posts"],
-                        channels=config.BUFFER_CHANNELS,
-                        post_id=post_id,
-                        image_urls=stored_data.get("image_urls"),
-                        show_images=(mode == "show")
-                    )
-                    slack_client.post("chat.update", {
-                        "channel": payload["channel"]["id"],
-                        "ts": payload["message"]["ts"],
-                        "text": "Preview Toggled",
-                        "blocks": blocks
-                    })
+                background_tasks.add_task(
+                    _task_toggle_preview, 
+                    payload["channel"]["id"], 
+                    payload["message"]["ts"], 
+                    post_id, 
+                    (mode == "show")
+                )
                 return PlainTextResponse("OK")
 
             # Handle Approve
@@ -376,7 +392,16 @@ async def slack_actions(request: Request, background_tasks: BackgroundTasks):
                         if input_id in values:
                             current_posts[style] = values[input_id]["value"]
                 
-                update_edit_modal(view_id, current_posts, channel_id, ts, post_id, new_image_urls)
+                # 3. Update in background
+                background_tasks.add_task(
+                    _task_remove_image_direct,
+                    view_id,
+                    current_posts,
+                    channel_id,
+                    ts,
+                    post_id,
+                    new_image_urls
+                )
                 return PlainTextResponse("OK")
 
             # Handle Edit (Restore)
@@ -393,14 +418,13 @@ async def slack_actions(request: Request, background_tasks: BackgroundTasks):
                     metadata=metadata
                 )
                 if view_id:
-                    import asyncio
-                    asyncio.create_task(
-                        _task_open_edit_modal(
-                            view_id, post_id, 
-                            payload.get("channel", {}).get("id"),
-                            payload.get("message", {}).get("ts"),
-                            payload.get("response_url")
-                        )
+                    background_tasks.add_task(
+                        _task_open_edit_modal,
+                        view_id, 
+                        post_id, 
+                        payload.get("channel", {}).get("id"),
+                        payload.get("message", {}).get("ts"),
+                        payload.get("response_url")
                     )
                 return PlainTextResponse("OK")
 
