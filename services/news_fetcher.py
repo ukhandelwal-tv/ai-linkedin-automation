@@ -49,14 +49,16 @@ class NewsApiFetcher(BaseFetcher):
     @staticmethod
     def _normalize(raw: dict) -> Dict[str, str]:
         source = raw.get("source", {})
+        description = raw.get("description") or ""
+        content = raw.get("content") or description  # fallback to description if content is null
         return {
-            "title": raw.get("title", ""),
-            "description": raw.get("description", ""),
-            "content": raw.get("content", raw.get("description", "")),
+            "title": raw.get("title") or "",
+            "description": description,
+            "content": content,
             "source": source.get("name", "Unknown") if isinstance(source, dict) else str(source),
-            "url": raw.get("url", ""),
-            "published_at": raw.get("publishedAt", ""),
-            "urlToImage": raw.get("urlToImage", ""),
+            "url": raw.get("url") or "",
+            "published_at": raw.get("publishedAt") or "",
+            "urlToImage": raw.get("urlToImage") or "",
         }
 
 

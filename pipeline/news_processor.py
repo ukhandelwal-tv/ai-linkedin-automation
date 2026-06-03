@@ -15,8 +15,10 @@ def clean_news(articles: List[Dict]) -> List[Dict]:
     cleaned = []
     
     for art in articles:
-        title = art.get("title", "").strip()
-        content = art.get("content", "").strip()
+        if art is None:
+            continue
+        title = (art.get("title") or "").strip()
+        content = (art.get("content") or "").strip()
         
         if not title or not content:
             continue
@@ -46,7 +48,7 @@ def enrich_with_trends(articles: List[Dict], top_trends: List[Dict]) -> List[Dic
     for art in articles:
         matched_trends = []
         # Combine title and content for better matching
-        search_text = f"{art.get('title', '')} {art.get('content', '')}".lower()
+        search_text = f"{art.get('title') or ''} {art.get('content') or ''}".lower()
         
         for trend in top_trends:
             trend_name = trend.get("trend_name", "").lower()

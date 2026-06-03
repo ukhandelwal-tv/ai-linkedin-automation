@@ -1,7 +1,10 @@
 import requests
+import os
 from config import config
 from utils.logger import get_logger
 from typing import List
+from services.visual_service import VisualService
+from utils.file_handler import upload_to_imgbb
 
 logger = get_logger(__name__)
 
@@ -19,10 +22,6 @@ def broadcast_to_buffer(posts: dict, selected_channels: dict, image_urls: list =
         "Content-Type": "application/json"
     }
 
-    from services.visual_service import VisualService
-    from utils.file_handler import upload_to_imgbb
-    import os
-
     visual_service = VisualService()
 
     for channel_id, style in selected_channels.items():
@@ -36,8 +35,7 @@ def broadcast_to_buffer(posts: dict, selected_channels: dict, image_urls: list =
             # Smart Instagram Image Handling
             if style == "instagram":
                 ig_images = []
-                from utils.file_handler import download_slack_file # Re-using download logic
-                
+
                 logger.info(f"Instagram: Performing Universal Scan on {len(current_images)} images...")
                 for idx, img_url in enumerate(current_images):
                     try:
@@ -51,9 +49,9 @@ def broadcast_to_buffer(posts: dict, selected_channels: dict, image_urls: list =
                             # Cloud URL? Download it temporarily
                             temp_filename = f"ig_temp_{idx}_{os.path.basename(img_url.split('?')[0])}"
                             local_path = os.path.join(config.MEDIA_DIR, temp_filename)
-                            r = requests.get(img_url, timeout=10)
+                            resp = requests.get(img_url, timeout=10)
                             with open(local_path, "wb") as f:
-                                f.write(r.content)
+                                f.write(resp.content)
 
                         # 2. Check and Square
                         if os.path.exists(local_path):
