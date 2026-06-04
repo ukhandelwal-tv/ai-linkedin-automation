@@ -86,8 +86,8 @@ def broadcast_to_buffer(posts: dict, selected_channels: dict, image_urls: list =
                 # Other platforms get the original set
                 images_to_use = current_images
             
-            images_str = ", ".join([f'{{url: "{u}"}}' for u in images_to_use])
-            assets_block = f'assets: {{ images: [ {images_str} ] }}'
+            assets_str = ", ".join([f'{{ image: {{ url: "{u}" }} }}' for u in images_to_use])
+            assets_block = f'assets: [ {assets_str} ]'
             logger.info(f"Attaching {len(images_to_use)} images for {style}")
 
         # Add Instagram-specific metadata
